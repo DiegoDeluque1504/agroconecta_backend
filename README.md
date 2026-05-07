@@ -14,14 +14,13 @@ AgroConecta conecta productores agrícolas con compradores eliminando intermedia
 
 | Nombre | Rol |
 |---|---|
-| Diego De Luque | Desarrollador principal / Backend |
-| Carlos Basilio | Desarrollador / Backend |
-| David Royero | Desarrollador / Frontend |
-| Daniel Royero | Desarrollador / Frontend |
-
+| Diego De Luque |
+| Carlos Basilio |
+| David Royero |
+| Daniel Royero |
 **Institución:** Universidad de La Guajira  
 **Programa:** Ingeniería de Sistemas  
-**Asignatura:** Formulación y Evaluación de Proyectos (Cód. 273271)
+**Asignatura:** Ingeniería de Software II
 
 ---
 
