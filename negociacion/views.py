@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from django.utils import timezone
+from notificaciones.utils import crear_notificacion
 import cloudinary.uploader
 
 from .models import Negociacion, Mensaje
@@ -205,6 +206,20 @@ def enviar_mensaje(request, negociacion_id):
 
     # Actualiza la fecha de la negociación para que aparezca primero en la lista
     negociacion.save()
+
+    # Notifica al otro participante que hay un mensaje nuevo
+    if es_comprador:
+        destinatario = negociacion.producto.usuario
+    else:
+        destinatario = negociacion.comprador
+
+    crear_notificacion(
+        usuario=destinatario,
+        tipo='mensaje_nuevo',
+        titulo='Mensaje nuevo',
+        mensaje=f'{request.user.first_name} {request.user.last_name} te envió un mensaje sobre {negociacion.producto.nombre}.',
+        url_destino=f'/negociaciones/{negociacion.id}'
+    )
 
     return Response(
         MensajeSerializer(mensaje).data,
