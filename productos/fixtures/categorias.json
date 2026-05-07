@@ -1,0 +1,74 @@
+[
+  {
+    "model": "productos.categoriaproducto",
+    "pk": 1,
+    "fields": {
+      "nombre": "Frutas",
+      "descripcion": "Frutas frescas de temporada y permanentes",
+      "icono": "fruit"
+    }
+  },
+  {
+    "model": "productos.categoriaproducto",
+    "pk": 2,
+    "fields": {
+      "nombre": "Verduras y hortalizas",
+      "descripcion": "Verduras, hortalizas y vegetales frescos",
+      "icono": "vegetable"
+    }
+  },
+  {
+    "model": "productos.categoriaproducto",
+    "pk": 3,
+    "fields": {
+      "nombre": "Tubérculos y raíces",
+      "descripcion": "Yuca, ñame, papa, batata y similares",
+      "icono": "tuber"
+    }
+  },
+  {
+    "model": "productos.categoriaproducto",
+    "pk": 4,
+    "fields": {
+      "nombre": "Granos y cereales",
+      "descripcion": "Maíz, frijol, arroz, lenteja y similares",
+      "icono": "grain"
+    }
+  },
+  {
+    "model": "productos.categoriaproducto",
+    "pk": 5,
+    "fields": {
+      "nombre": "Lácteos",
+      "descripcion": "Leche, queso, suero y derivados",
+      "icono": "dairy"
+    }
+  },
+  {
+    "model": "productos.categoriaproducto",
+    "pk": 6,
+    "fields": {
+      "nombre": "Carnes y aves",
+      "descripcion": "Carnes de res, cerdo, pollo y animales de granja",
+      "icono": "meat"
+    }
+  },
+  {
+    "model": "productos.categoriaproducto",
+    "pk": 7,
+    "fields": {
+      "nombre": "Hierbas y condimentos",
+      "descripcion": "Hierbas aromáticas, especias y condimentos naturales",
+      "icono": "herb"
+    }
+  },
+  {
+    "model": "productos.categoriaproducto",
+    "pk": 8,
+    "fields": {
+      "nombre": "Otros",
+      "descripcion": "Productos agrícolas que no clasifican en las categorías anteriores",
+      "icono": "other"
+    }
+  }
+]

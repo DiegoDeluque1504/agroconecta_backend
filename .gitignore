@@ -1,0 +1,22 @@
+# Entorno virtual
+venv/
+
+# Archivos compilados de Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Archivos de Django
+*.log
+local_settings.py
+db.sqlite3
+
+# Variables de entorno
+.env
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de VS Code
+.vscode/

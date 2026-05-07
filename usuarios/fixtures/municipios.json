@@ -1,0 +1,77 @@
+[
+  {
+    "model": "usuarios.municipio",
+    "pk": 1,
+    "fields": { "nombre": "Riohacha", "codigo_dane": "44001" }
+  },
+  {
+    "model": "usuarios.municipio",
+    "pk": 2,
+    "fields": { "nombre": "Albania", "codigo_dane": "44035" }
+  },
+  {
+    "model": "usuarios.municipio",
+    "pk": 3,
+    "fields": { "nombre": "Barrancas", "codigo_dane": "44078" }
+  },
+  {
+    "model": "usuarios.municipio",
+    "pk": 4,
+    "fields": { "nombre": "Dibulla", "codigo_dane": "44090" }
+  },
+  {
+    "model": "usuarios.municipio",
+    "pk": 5,
+    "fields": { "nombre": "Distracción", "codigo_dane": "44098" }
+  },
+  {
+    "model": "usuarios.municipio",
+    "pk": 6,
+    "fields": { "nombre": "El Molino", "codigo_dane": "44110" }
+  },
+  {
+    "model": "usuarios.municipio",
+    "pk": 7,
+    "fields": { "nombre": "Fonseca", "codigo_dane": "44279" }
+  },
+  {
+    "model": "usuarios.municipio",
+    "pk": 8,
+    "fields": { "nombre": "Hatonuevo", "codigo_dane": "44378" }
+  },
+  {
+    "model": "usuarios.municipio",
+    "pk": 9,
+    "fields": { "nombre": "La Jagua del Pilar", "codigo_dane": "44420" }
+  },
+  {
+    "model": "usuarios.municipio",
+    "pk": 10,
+    "fields": { "nombre": "Maicao", "codigo_dane": "44430" }
+  },
+  {
+    "model": "usuarios.municipio",
+    "pk": 11,
+    "fields": { "nombre": "Manaure", "codigo_dane": "44560" }
+  },
+  {
+    "model": "usuarios.municipio",
+    "pk": 12,
+    "fields": { "nombre": "San Juan del Cesar", "codigo_dane": "44650" }
+  },
+  {
+    "model": "usuarios.municipio",
+    "pk": 13,
+    "fields": { "nombre": "Uribia", "codigo_dane": "44847" }
+  },
+  {
+    "model": "usuarios.municipio",
+    "pk": 14,
+    "fields": { "nombre": "Urumita", "codigo_dane": "44855" }
+  },
+  {
+    "model": "usuarios.municipio",
+    "pk": 15,
+    "fields": { "nombre": "Villanueva", "codigo_dane": "44874" }
+  }
+]
