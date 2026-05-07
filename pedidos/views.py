@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db import transaction
+from notificaciones.utils import crear_notificacion
 
 from .models import Pedido, HistorialEstadoPedido, Calificacion
 from .serializers import (
@@ -84,6 +85,15 @@ def crear_pedido(request, negociacion_id):
         # Cierra la negociación
         negociacion.estado = 'cerrada'
         negociacion.save()
+
+        # Notifica al comprador que su pedido fue confirmado
+        crear_notificacion(
+        usuario=negociacion.comprador,
+        tipo='pedido_confirmado',
+        titulo='Pedido confirmado',
+        mensaje=f'{request.user.first_name} {request.user.last_name} confirmó tu pedido de {negociacion.producto.nombre}.',
+        url_destino=f'/pedidos/{pedido.id}'
+        )
 
     return Response(
         PedidoDetalleSerializer(pedido, context={'request': request}).data,
@@ -214,6 +224,20 @@ def actualizar_estado(request, pedido_id):
             longitud=serializer.validated_data.get('longitud'),
         )
 
+        # Determina a quién notificar según quién actualizó el estado
+        if es_productor:
+            destinatario = pedido.negociacion.comprador
+        else:
+            destinatario = pedido.negociacion.producto.usuario
+
+        crear_notificacion(
+            usuario=destinatario,
+            tipo=f'pedido_{nuevo_estado}',
+            titulo=f'Pedido {nuevo_estado.replace("_", " ")}',
+            mensaje=f'Tu pedido de {pedido.negociacion.producto.nombre} cambió a: {nuevo_estado.replace("_", " ")}.',
+            url_destino=f'/pedidos/{pedido.id}'
+        )
+
     return Response(
         PedidoDetalleSerializer(pedido, context={'request': request}).data,
         status=status.HTTP_200_OK
@@ -289,6 +313,15 @@ def calificar(request, pedido_id):
         calificado.calificacion_promedio = round(promedio, 2)
         calificado.total_calificaciones = total
         calificado.save()
+
+        # Notifica al calificado que recibió una calificación
+        crear_notificacion(
+            usuario=calificado,
+            tipo='calificacion_recibida',
+            titulo='Nueva calificación recibida',
+            mensaje=f'{request.user.first_name} {request.user.last_name} te calificó con {serializer.validated_data["puntuacion"]} estrellas.',
+            url_destino=f'/pedidos/{pedido.id}'
+        )
 
     return Response(
         {'mensaje': 'Calificación registrada exitosamente.'},
