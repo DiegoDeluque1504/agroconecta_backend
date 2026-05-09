@@ -82,6 +82,17 @@ def crear_pedido(request, negociacion_id):
             observacion='Pedido creado y confirmado.'
         )
 
+        #Descontar stock del producto al crear el pedido
+        producto = negociacion.producto
+        producto.cantidad_disponible -= datos['cantidad_acordada']
+
+        #Si el stock llega a cero o menos, marcar como agotado
+        if producto.cantidad_disponible <= 0:
+            producto.cantidad_disponible = 0
+            producto.estado = 'agotado'
+        
+        producto.save()
+
         # Cierra la negociación
         negociacion.estado = 'cerrada'
         negociacion.save()

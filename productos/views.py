@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view, permission_classes, parser_class
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q
 import cloudinary.uploader
 
@@ -69,9 +70,12 @@ def catalogo(request):
             Q(descripcion__icontains=busqueda)
         )
 
-    serializer = ProductoListSerializer(productos, many=True)
-    return Response(serializer.data)
-
+    # Paginación
+    paginator = PageNumberPagination()
+    paginator.page_size = 12  # 12 productos por página
+    resultado = paginator.paginate_queryset(productos, request)
+    serializer = ProductoListSerializer(resultado, many=True)
+    return paginator.get_paginated_response(serializer.data)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
