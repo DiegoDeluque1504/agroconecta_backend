@@ -127,6 +127,8 @@ class NegociacionDetalleSerializer(serializers.ModelSerializer):
     mensajes = MensajeSerializer(many=True, read_only=True)
     comprador_nombre = serializers.SerializerMethodField()
     productor_nombre = serializers.SerializerMethodField()
+    productor_id = serializers.IntegerField(source='producto.usuario.id', read_only=True)
+    comprador_id = serializers.IntegerField(source='comprador.id', read_only=True)
     producto_nombre = serializers.CharField(
         source='producto.nombre',
         read_only=True
@@ -148,6 +150,8 @@ class NegociacionDetalleSerializer(serializers.ModelSerializer):
             'mensajes',
             'created_at',
             'updated_at',
+            'productor_id',
+            'comprador_id'
         ]
 
     def get_comprador_nombre(self, obj):
