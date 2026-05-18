@@ -5,6 +5,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from django.utils import timezone
 from notificaciones.utils import crear_notificacion
+from file_validators import validar_audio
 import cloudinary.uploader
 
 from .models import Negociacion, Mensaje
@@ -191,6 +192,12 @@ def enviar_mensaje(request, negociacion_id):
 
     elif tipo == 'audio':
         audio = serializer.validated_data['audio']
+	# ── Validación de tipo y tamaño ──────────────────────────────────
+        try:
+            validar_audio(audio)
+        except serializers.ValidationError as e:
+            return Response({'error': e.detail}, status=status.HTTP_400_BAD_REQUEST)
+        # ────────────────────────────────────────────────────────────────
         resultado = cloudinary.uploader.upload(
             audio,
             folder='agroconecta/audios',
