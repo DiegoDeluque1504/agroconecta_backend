@@ -86,10 +86,6 @@ class RegistroSerializer(serializers.ModelSerializer):
 
 
 class UsuarioPerfilSerializer(serializers.ModelSerializer):
-    """
-    Serializer para ver y editar el perfil del usuario autenticado.
-    No expone la contraseña ni datos sensibles.
-    """
     municipio_detalle = MunicipioSerializer(
         source='municipio',
         read_only=True
@@ -114,7 +110,6 @@ class UsuarioPerfilSerializer(serializers.ModelSerializer):
             'municipio_detalle',
             'created_at',
         ]
-        # Estos campos no se pueden editar directamente
         read_only_fields = [
             'email',
             'email_verificado',
@@ -122,6 +117,59 @@ class UsuarioPerfilSerializer(serializers.ModelSerializer):
             'total_calificaciones',
             'created_at',
         ]
+
+    # ── Validaciones de coordenadas GPS ──────────────────────────────────
+
+    def validate_latitud(self, value):
+        """Valida que la latitud esté dentro del rango geográfico válido."""
+        if value is not None:
+            if value < -90 or value > 90:
+                raise serializers.ValidationError(
+                    'La latitud debe estar entre -90 y 90.'
+                )
+        return value
+
+    def validate_longitud(self, value):
+        """Valida que la longitud esté dentro del rango geográfico válido."""
+        if value is not None:
+            if value < -180 or value > 180:
+                raise serializers.ValidationError(
+                    'La longitud debe estar entre -180 y 180.'
+                )
+        return value
+
+    def validate(self, attrs):
+        """
+        Valida que las coordenadas correspondan al departamento de La Guajira.
+        Bounding box oficial del departamento según el IGAC:
+          Latitud:  10.38° N  a  12.47° N
+          Longitud: 71.12° O  a  73.39° O
+        """
+        latitud = attrs.get('latitud')
+        longitud = attrs.get('longitud')
+
+        # Solo valida si el usuario está enviando coordenadas
+        if latitud is not None and longitud is not None:
+            LAT_MIN, LAT_MAX = 10.38, 12.47
+            LON_MIN, LON_MAX = -73.39, -71.12
+
+            if not (LAT_MIN <= float(latitud) <= LAT_MAX):
+                raise serializers.ValidationError({
+                    'latitud': (
+                        f'La latitud {latitud} no corresponde a La Guajira. '
+                        f'Debe estar entre {LAT_MIN} y {LAT_MAX}.'
+                    )
+                })
+
+            if not (LON_MIN <= float(longitud) <= LON_MAX):
+                raise serializers.ValidationError({
+                    'longitud': (
+                        f'La longitud {longitud} no corresponde a La Guajira. '
+                        f'Debe estar entre {LON_MIN} y {LON_MAX}.'
+                    )
+                })
+
+        return attrs
 
 
 class VerificacionEmailSerializer(serializers.Serializer):

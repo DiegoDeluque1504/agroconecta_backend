@@ -4,7 +4,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
+from rest_framework import serializers
 from django.db.models import Q
+from file_validators import validar_foto  # CORREGIDO: era 'from validators import ...'
 import cloudinary.uploader
 
 from .models import Producto, FotoProducto, CategoriaProducto
@@ -72,10 +74,11 @@ def catalogo(request):
 
     # Paginación
     paginator = PageNumberPagination()
-    paginator.page_size = 12  # 12 productos por página
+    paginator.page_size = 12
     resultado = paginator.paginate_queryset(productos, request)
     serializer = ProductoListSerializer(resultado, many=True)
     return paginator.get_paginated_response(serializer.data)
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -111,12 +114,16 @@ def crear_producto(request):
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    # El productor del producto es el usuario autenticado
     producto = serializer.save(usuario=request.user)
 
-    # Si se envió una foto, la subimos a Cloudinary
     foto = request.FILES.get('foto')
     if foto:
+        # Validación de tipo y tamaño
+        try:
+            validar_foto(foto)
+        except serializers.ValidationError as e:
+            return Response({'error': e.detail}, status=status.HTTP_400_BAD_REQUEST)
+
         resultado = cloudinary.uploader.upload(
             foto,
             folder='agroconecta/productos',
@@ -130,7 +137,6 @@ def crear_producto(request):
             orden=0
         )
 
-    # Devolvemos el producto completo con la foto ya incluida
     producto.refresh_from_db()
     return Response(
         ProductoDetalleSerializer(producto).data,
@@ -153,7 +159,6 @@ def gestionar_producto(request, producto_id):
             status=status.HTTP_404_NOT_FOUND
         )
 
-    # Verifica que el producto pertenece al usuario autenticado
     if producto.usuario != request.user:
         return Response(
             {'error': 'No tienes permiso para modificar este producto.'},
@@ -161,7 +166,6 @@ def gestionar_producto(request, producto_id):
         )
 
     if request.method == 'DELETE':
-        # Elimina las fotos de Cloudinary antes de borrar el producto
         for foto in producto.fotos.all():
             cloudinary.uploader.destroy(foto.public_id_cloudinary)
         producto.delete()
@@ -205,16 +209,20 @@ def agregar_foto(request, producto_id):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Sube la foto a Cloudinary
+    # Validación de tipo y tamaño
+    try:
+        validar_foto(foto)
+    except serializers.ValidationError as e:
+        return Response({'error': e.detail}, status=status.HTTP_400_BAD_REQUEST)
+
     resultado = cloudinary.uploader.upload(
         foto,
         folder='agroconecta/productos',
         resource_type='image'
     )
 
-    # Determina el orden de la nueva foto
     ultimo_orden = producto.fotos.count()
-    es_principal = ultimo_orden == 0  # Es principal solo si es la primera foto
+    es_principal = ultimo_orden == 0
 
     foto_obj = FotoProducto.objects.create(
         producto=producto,
@@ -248,14 +256,12 @@ def eliminar_foto(request, foto_id):
             status=status.HTTP_404_NOT_FOUND
         )
 
-    # Elimina de Cloudinary
     cloudinary.uploader.destroy(foto.public_id_cloudinary)
 
     era_principal = foto.es_principal
     producto = foto.producto
     foto.delete()
 
-    # Si la foto eliminada era la principal, asigna la siguiente como principal
     if era_principal:
         siguiente_foto = producto.fotos.first()
         if siguiente_foto:
