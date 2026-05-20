@@ -130,13 +130,14 @@ REST_FRAMEWORK = {
 
     # Rate limiting
     'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle',
+        'config.throttling.GuestExplorationThrottle',
+        'config.throttling.AuthenticatedUserRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/day',   # CORREGIDO: era '3/day'
+        'guest_exploration': '100/day',
         'user': '1000/day',
     },
+    'EXCEPTION_HANDLER': 'config.exceptions.custom_exception_handler',
 }
 
 # Configuración de CORS para desarrollo local
@@ -170,17 +171,23 @@ cloudinary.config(
 )
 
 # Headers de seguridad HTTP
-X_FRAME_OPTIONS = 'DENY'          # Protege contra clickjacking
-SECURE_BROWSER_XSS_FILTER = True  # Protege contra XSS (legacy, inofensivo)
-# NOTA: SECURE_CONTENT_SECURITY_POLICY fue eliminado — no es una setting nativa
-# de Django. Para CSP real en el futuro instalar django-csp.
+X_FRAME_OPTIONS = 'DENY'                    # Protege contra clickjacking
+SECURE_BROWSER_XSS_FILTER = True            # Protege contra XSS (legacy, inofensivo)
+SECURE_CONTENT_TYPE_NOSNIFF = True          # Evita sniffing de tipos MIME
 
 # Configuración de django-axes
 AXES_FAILURE_LIMIT = 5                        # Bloquear después de 5 intentos fallidos
 AXES_COOLOFF_DURATION = timedelta(hours=1)    # Bloquear por 1 hora
+AXES_COOLOFF_TIME = AXES_COOLOFF_DURATION     # Alias requerido por helpers de axes
 AXES_LOCK_OUT_AT_FAILURE = True               # Bloquear automáticamente
+AXES_HTTP_RESPONSE_CODE = 429
+AXES_COOLOFF_MESSAGE = (
+    'Demasiados intentos fallidos. Tu acceso ha sido bloqueado temporalmente. '
+    'Intenta nuevamente más tarde.'
+)
+# Respuesta JSON con tiempo restante para el frontend Angular
+AXES_LOCKOUT_CALLABLE = 'usuarios.lockout_utils.axes_lockout_callable'
 
-# CORREGIDO: backend requerido para que axes funcione correctamente
 AUTHENTICATION_BACKENDS = [
     'axes.backends.AxesStandaloneBackend',
     'django.contrib.auth.backends.ModelBackend',
