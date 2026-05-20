@@ -186,10 +186,24 @@ SIMPLE_JWT = {
 }
 
 # Correo
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-EMAIL_HOST = 'localhost'
-EMAIL_PORT = 25
-DEFAULT_FROM_EMAIL = 'AgroConecta <noreply@agroconecta.com>'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+EMAIL_HOST = 'smtp.resend.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+
+EMAIL_HOST_USER = 'resend'
+EMAIL_HOST_PASSWORD = os.getenv('RESEND_API_KEY')
+
+DEFAULT_FROM_EMAIL = 'AgroConecta <onboarding@resend.dev>'
+
+# Configuración de Resend
+RESEND_API_KEY = os.getenv('RESEND_API_KEY')
+
+FRONTEND_URL = os.getenv(
+    'FRONTEND_URL',
+    'http://localhost:4200'
+)
 
 # Seguridad HTTP
 X_FRAME_OPTIONS = 'DENY'

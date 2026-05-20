@@ -51,7 +51,7 @@ def registro(request):
     """
     Endpoint para registrar un nuevo usuario.
     Crea la cuenta inactiva y genera un token de verificación
-    que se imprime en la consola durante desarrollo.
+    enviado por correo electrónico.
     """
     email = (request.data.get('email') or '').strip().lower()
 
@@ -84,8 +84,12 @@ def registro(request):
         expira_en=expiracion
     )
 
-    # Durante desarrollo, el correo se imprime en la consola de Django
-    # En producción esto enviará un correo real
+    # Link de verificación
+    verification_url = (
+        f'{settings.FRONTEND_URL}/auth/verificar-email?token={token_str}'
+    )
+
+    # Envío de correo
     send_mail(
         subject='Verifica tu correo en AgroConecta',
         message=f'''
@@ -93,9 +97,11 @@ Hola {usuario.first_name},
 
 Gracias por registrarte en AgroConecta.
 
-Tu token de verificación es: {token_str}
+Para activar tu cuenta, haz clic en el siguiente enlace:
 
-Este token expira en 24 horas.
+{verification_url}
+
+Este enlace expira en 24 horas.
 
 Si no creaste esta cuenta, ignora este mensaje.
         ''',
@@ -106,7 +112,10 @@ Si no creaste esta cuenta, ignora este mensaje.
 
     return Response(
         {
-            'mensaje': 'Cuenta creada exitosamente. Revisa tu correo para verificar tu cuenta.',
+            'mensaje': (
+                'Cuenta creada exitosamente. '
+                'Revisa tu correo para verificar tu cuenta.'
+            ),
             'email': usuario.email,
         },
         status=status.HTTP_201_CREATED
