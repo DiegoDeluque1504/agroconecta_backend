@@ -4,6 +4,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
+from axes.handlers.proxy import AxesProxyHandler
+from axes.helpers import get_credentials
+from .lockout_utils import lockout_api_response
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
@@ -18,19 +21,28 @@ from .serializers import (
     MunicipioSerializer,
     VerificacionEmailSerializer,
     LoginSerializer,
+    CambiarPasswordSerializer,
 )
 
 
-def generar_tokens_jwt(usuario):
+def _tiene_token_verificacion_activo(email: str) -> bool:
     """
-    Genera los tokens JWT de acceso y refresco para un usuario.
-    Se reutiliza en el login y después de verificar el correo.
+    True si el correo pertenece a una cuenta sin verificar con un token
+    de verificación vigente (no usado y sin expirar).
     """
-    refresh = RefreshToken.for_user(usuario)
-    return {
-        'refresh': str(refresh),
-        'access': str(refresh.access_token),
-    }
+    try:
+        usuario = Usuario.objects.select_related('token_verificacion').get(email=email)
+    except Usuario.DoesNotExist:
+        return False
+
+    if usuario.email_verificado or usuario.is_active:
+        return False
+
+    token = getattr(usuario, 'token_verificacion', None)
+    if not token or token.usado:
+        return False
+
+    return timezone.now() <= token.expira_en
 
 
 @api_view(['POST'])
@@ -41,6 +53,20 @@ def registro(request):
     Crea la cuenta inactiva y genera un token de verificación
     que se imprime en la consola durante desarrollo.
     """
+    email = (request.data.get('email') or '').strip().lower()
+
+    if email and _tiene_token_verificacion_activo(email):
+        return Response(
+            {
+                'code': 'token_activo',
+                'error': (
+                    'Ya existe una solicitud de registro pendiente para este correo. '
+                    'Revisa tu bandeja de entrada o espera 24 horas antes de volver a intentarlo.'
+                ),
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     serializer = RegistroSerializer(data=request.data)
 
     if not serializer.is_valid():
@@ -85,6 +111,18 @@ Si no creaste esta cuenta, ignora este mensaje.
         },
         status=status.HTTP_201_CREATED
     )
+
+
+def generar_tokens_jwt(usuario):
+    """
+    Genera los tokens JWT de acceso y refresco para un usuario.
+    Se reutiliza en el login y después de verificar el correo.
+    """
+    refresh = RefreshToken.for_user(usuario)
+    return {
+        'refresh': str(refresh),
+        'access': str(refresh.access_token),
+    }
 
 
 @api_view(['POST'])
@@ -160,14 +198,26 @@ def login(request):
 
     email = serializer.validated_data['email']
     password = serializer.validated_data['password']
+    credentials = get_credentials(username=email, password=password)
+
+    # Bloqueo por django-axes (demasiados intentos fallidos)
+    if AxesProxyHandler.is_locked(request, credentials):
+        return lockout_api_response(request, credentials)
 
     # Django busca el usuario y verifica la contraseña encriptada
     usuario = authenticate(request, username=email, password=password)
 
     if usuario is None:
+        # Tras un intento fallido, puede activarse el bloqueo en esta misma petición
+        if AxesProxyHandler.is_locked(request, credentials):
+            return lockout_api_response(request, credentials)
         return Response(
-            {'error': 'Correo o contraseña incorrectos.'},
-            status=status.HTTP_401_UNAUTHORIZED
+            {
+                'code': 'invalid_credentials',
+                'error': 'Correo o contraseña incorrectos.',
+                'detail': 'Correo o contraseña incorrectos.',
+            },
+            status=status.HTTP_401_UNAUTHORIZED,
         )
 
     if not usuario.email_verificado:
@@ -217,6 +267,31 @@ def perfil(request):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def cambiar_password(request):
+    """
+    Cambia la contraseña del usuario autenticado.
+    Requiere la contraseña actual y valida la nueva con las reglas de Django.
+    """
+    serializer = CambiarPasswordSerializer(
+        data=request.data,
+        context={'request': request},
+    )
+
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    usuario = request.user
+    usuario.set_password(serializer.validated_data['password_nueva'])
+    usuario.save()
+
+    return Response(
+        {'mensaje': 'Contraseña actualizada correctamente.'},
+        status=status.HTTP_200_OK,
+    )
 
 
 @api_view(['GET'])

@@ -11,6 +11,7 @@ urlpatterns = [
 
     # Perfil
     path('perfil/', views.perfil, name='perfil'),
+    path('cambiar-password/', views.cambiar_password, name='cambiar-password'),
 
     # Datos de referencia
     path('municipios/', views.listar_municipios, name='listar-municipios'),

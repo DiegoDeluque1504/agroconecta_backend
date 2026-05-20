@@ -186,3 +186,36 @@ class LoginSerializer(serializers.Serializer):
     """
     email = serializers.EmailField(required=True)
     password = serializers.CharField(required=True, write_only=True)
+
+
+class CambiarPasswordSerializer(serializers.Serializer):
+    """
+    Serializer para cambiar la contraseña del usuario autenticado.
+    Valida la contraseña actual y aplica las reglas de Django para la nueva.
+    """
+    password_actual = serializers.CharField(
+        required=True,
+        write_only=True,
+        label='Contraseña actual',
+    )
+    password_nueva = serializers.CharField(
+        required=True,
+        write_only=True,
+        label='Contraseña nueva',
+    )
+
+    def validate(self, attrs):
+        usuario = self.context['request'].user
+
+        if not usuario.check_password(attrs['password_actual']):
+            raise serializers.ValidationError({
+                'password_actual': 'La contraseña actual es incorrecta.',
+            })
+
+        if attrs['password_actual'] == attrs['password_nueva']:
+            raise serializers.ValidationError({
+                'password_nueva': 'La nueva contraseña debe ser diferente a la actual.',
+            })
+
+        validate_password(attrs['password_nueva'], user=usuario)
+        return attrs

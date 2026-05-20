@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from usuarios.models import VerificationToken
+
+from usuarios.models import TokenVerificacion
 
 
 class Command(BaseCommand):
@@ -15,21 +16,20 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         dry_run = options['dry_run']
-        
-        # Obtener tokens expirados que no han sido usados
-        expired_tokens = VerificationToken.objects.filter(
-            expires_at__lt=timezone.now(),
-            used=False
+
+        expired_tokens = TokenVerificacion.objects.filter(
+            expira_en__lt=timezone.now(),
+            usado=False,
         )
-        
+
         count = expired_tokens.count()
-        
+
         if count == 0:
             self.stdout.write(
                 self.style.SUCCESS('No hay tokens expirados para eliminar.')
             )
             return
-        
+
         if dry_run:
             self.stdout.write(
                 self.style.WARNING(
