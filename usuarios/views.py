@@ -8,12 +8,13 @@ from axes.handlers.proxy import AxesProxyHandler
 from axes.helpers import get_credentials
 from .lockout_utils import lockout_api_response
 from django.utils import timezone
-from django.core.mail import send_mail
 from django.conf import settings
+from django.db import transaction
 import uuid
 import secrets
 from datetime import timedelta
 
+from .email_service import EmailSendError, enviar_correo_verificacion
 from .models import Usuario, Municipio, TokenVerificacion
 from .serializers import (
     RegistroSerializer,
@@ -72,43 +73,33 @@ def registro(request):
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    usuario = serializer.save()
-
-    # Genera un token de verificación seguro
     token_str = secrets.token_urlsafe(32)
     expiracion = timezone.now() + timedelta(hours=24)
-
-    TokenVerificacion.objects.create(
-        usuario=usuario,
-        token=token_str,
-        expira_en=expiracion
-    )
-
-    # Link de verificación
     verification_url = (
         f'{settings.FRONTEND_URL}/auth/verificar-email?token={token_str}'
     )
 
-    # Envío de correo
-    send_mail(
-        subject='Verifica tu correo en AgroConecta',
-        message=f'''
-Hola {usuario.first_name},
-
-Gracias por registrarte en AgroConecta.
-
-Para activar tu cuenta, haz clic en el siguiente enlace:
-
-{verification_url}
-
-Este enlace expira en 24 horas.
-
-Si no creaste esta cuenta, ignora este mensaje.
-        ''',
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[usuario.email],
-        fail_silently=False,
-    )
+    try:
+        with transaction.atomic():
+            usuario = serializer.save()
+            TokenVerificacion.objects.create(
+                usuario=usuario,
+                token=token_str,
+                expira_en=expiracion,
+            )
+            enviar_correo_verificacion(
+                destinatario=usuario.email,
+                nombre=usuario.first_name,
+                enlace_verificacion=verification_url,
+            )
+    except EmailSendError as exc:
+        return Response(
+            {
+                'code': 'email_send_failed',
+                'error': exc.message,
+            },
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
 
     return Response(
         {
