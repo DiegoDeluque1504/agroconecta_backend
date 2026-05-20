@@ -15,11 +15,37 @@ class EmailSendError(Exception):
         super().__init__(message)
 
 
+def _validar_configuracion_correo():
+    """En producción exige remitente de un dominio verificado en Resend."""
+    remitente = (settings.DEFAULT_FROM_EMAIL or '').lower()
+    if settings.DEBUG:
+        return
+    if not remitente or 'resend.dev' in remitente:
+        raise EmailSendError(
+            'Correo no configurado para producción. Define RESEND_FROM_EMAIL en Render '
+            'con una dirección de un dominio verificado en Resend '
+            '(por ejemplo: AgroConecta <noreply@tudominio.com>). '
+            'Ver docs/EMAIL_RESEND.md.'
+        )
+
+
+def _mensaje_error_resend(status_code, response_text):
+    texto = (response_text or '').lower()
+    if status_code == 403 or 'verify a domain' in texto or 'only send' in texto:
+        return (
+            'El servicio de correo no puede enviar a este destinatario. '
+            'El administrador debe verificar un dominio propio en Resend.'
+        )
+    return 'No se pudo enviar el correo de verificación. Intenta más tarde.'
+
+
 def enviar_correo_verificacion(destinatario, nombre, enlace_verificacion):
     """
     Envía el correo de verificación vía API HTTP de Resend.
     Render y otros PaaS suelen bloquear SMTP (puerto 587); la API evita timeouts.
     """
+    _validar_configuracion_correo()
+
     api_key = settings.RESEND_API_KEY
     if not api_key:
         if settings.DEBUG:
@@ -70,7 +96,7 @@ def enviar_correo_verificacion(destinatario, nombre, enlace_verificacion):
             response.text,
         )
         raise EmailSendError(
-            'No se pudo enviar el correo de verificación. Intenta más tarde.',
+            _mensaje_error_resend(response.status_code, response.text),
             status_code=response.status_code,
         )
 

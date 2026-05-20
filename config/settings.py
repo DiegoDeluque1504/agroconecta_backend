@@ -185,13 +185,18 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
 }
 
-# Correo (API HTTP de Resend — ver usuarios/email_service.py)
-# SMTP en puerto 587 suele bloquearse o agotar timeout en Render.
-DEFAULT_FROM_EMAIL = os.getenv(
-    'DEFAULT_FROM_EMAIL',
-    'AgroConecta <onboarding@resend.dev>',
-)
+# Correo (API HTTP de Resend — ver usuarios/email_service.py y docs/EMAIL_RESEND.md)
+# Para enviar a CUALQUIER usuario: verifica un dominio propio en Resend y usa
+# RESEND_FROM_EMAIL con una dirección de ese dominio (ej. noreply@tudominio.com).
+# onboarding@resend.dev solo sirve en desarrollo y solo a tu propio correo.
 RESEND_API_KEY = os.getenv('RESEND_API_KEY')
+RESEND_FROM_EMAIL = os.getenv('RESEND_FROM_EMAIL') or os.getenv('DEFAULT_FROM_EMAIL')
+if RESEND_FROM_EMAIL:
+    DEFAULT_FROM_EMAIL = RESEND_FROM_EMAIL
+elif DEBUG:
+    DEFAULT_FROM_EMAIL = 'AgroConecta <onboarding@resend.dev>'
+else:
+    DEFAULT_FROM_EMAIL = ''
 
 FRONTEND_URL = os.getenv(
     'FRONTEND_URL',
