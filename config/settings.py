@@ -4,22 +4,35 @@ Django settings for config project.
 
 from pathlib import Path
 from dotenv import load_dotenv
+from datetime import timedelta
 import os
 import cloudinary
 
-load_dotenv()
-
-from datetime import timedelta
+# Cargar .env solo en desarrollo local
+if os.path.exists('.env'):
+    load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-)!oe+(pobv4_mtz@pyq$at1t@%o^7+_s(8pvb@e0!ynw^8&r4r'
+# Seguridad
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
-ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS]
+# Hosts permitidos
+RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
 
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+]
+
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
+# Configuración necesaria para Render (proxy HTTPS)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -76,7 +89,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-
+# Base de datos
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -88,7 +101,7 @@ DATABASES = {
     }
 }
 
-
+# Validadores de contraseña
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -104,7 +117,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
+# Internacionalización
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
@@ -113,19 +126,22 @@ USE_I18N = True
 
 USE_TZ = True
 
+# Archivos estáticos
 STATIC_URL = 'static/'
 
 # Modelo de usuario personalizado
 AUTH_USER_MODEL = 'usuarios.Usuario'
 
-# Configuración de Django REST Framework
+# Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 12,
 
@@ -134,21 +150,31 @@ REST_FRAMEWORK = {
         'config.throttling.GuestExplorationThrottle',
         'config.throttling.AuthenticatedUserRateThrottle',
     ],
+
     'DEFAULT_THROTTLE_RATES': {
         'guest_exploration': '100/day',
         'user': '1000/day',
     },
+
     'EXCEPTION_HANDLER': 'config.exceptions.custom_exception_handler',
 }
 
-# Configuración de CORS para desarrollo local
+# CORS
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:4200',
 ]
 
+# Cloudinary
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-# Configuración de JWT
+cloudinary.config(
+    cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.getenv('CLOUDINARY_API_KEY'),
+    api_secret=os.getenv('CLOUDINARY_API_SECRET'),
+    secure=True
+)
+
+# JWT
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
@@ -158,35 +184,30 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
 }
 
-# Configuración de correo: imprime en consola durante desarrollo
+# Correo
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_HOST = 'localhost'
 EMAIL_PORT = 25
 DEFAULT_FROM_EMAIL = 'AgroConecta <noreply@agroconecta.com>'
 
-cloudinary.config(
-    cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
-    api_key=os.getenv('CLOUDINARY_API_KEY'),
-    api_secret=os.getenv('CLOUDINARY_API_SECRET'),
-    secure=True
-)
+# Seguridad HTTP
+X_FRAME_OPTIONS = 'DENY'
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
 
-# Headers de seguridad HTTP
-X_FRAME_OPTIONS = 'DENY'                    # Protege contra clickjacking
-SECURE_BROWSER_XSS_FILTER = True            # Protege contra XSS (legacy, inofensivo)
-SECURE_CONTENT_TYPE_NOSNIFF = True          # Evita sniffing de tipos MIME
-
-# Configuración de django-axes
-AXES_FAILURE_LIMIT = 5                        # Bloquear después de 5 intentos fallidos
-AXES_COOLOFF_DURATION = timedelta(hours=1)    # Bloquear por 1 hora
-AXES_COOLOFF_TIME = AXES_COOLOFF_DURATION     # Alias requerido por helpers de axes
-AXES_LOCK_OUT_AT_FAILURE = True               # Bloquear automáticamente
+# django-axes
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_DURATION = timedelta(hours=1)
+AXES_COOLOFF_TIME = AXES_COOLOFF_DURATION
+AXES_LOCK_OUT_AT_FAILURE = True
 AXES_HTTP_RESPONSE_CODE = 429
+
 AXES_COOLOFF_MESSAGE = (
     'Demasiados intentos fallidos. Tu acceso ha sido bloqueado temporalmente. '
     'Intenta nuevamente más tarde.'
 )
-# Respuesta JSON con tiempo restante para el frontend Angular
+
+# Respuesta JSON para Angular
 AXES_LOCKOUT_CALLABLE = 'usuarios.lockout_utils.axes_lockout_callable'
 
 AUTHENTICATION_BACKENDS = [
