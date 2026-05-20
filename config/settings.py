@@ -162,6 +162,7 @@ REST_FRAMEWORK = {
 # CORS
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:4200',
+    'https://agroconecta-frontend-sigma.vercel.app',
 ]
 
 # Cloudinary
