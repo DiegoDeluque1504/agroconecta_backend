@@ -42,7 +42,9 @@ AgroConecta conecta productores agrícolas con compradores eliminando intermedia
 | django-cors-headers | CORS para el frontend Angular |
 | Cloudinary | Imágenes y audios |
 | python-dotenv | Variables de entorno |
-| Railway | Despliegue en producción (planeado) |
+| Resend (API HTTP) | Correos de verificación |
+| Render | Despliegue en producción |
+| Gunicorn | Servidor WSGI en Render |
 
 ---
 
@@ -61,9 +63,12 @@ agroconectabackend/
 │   ├── serializers.py
 │   ├── views.py
 │   ├── urls.py
+│   ├── email_service.py     # Envío de correos vía API Resend
 │   ├── lockout_utils.py     # Respuestas JSON de django-axes
 │   ├── fixtures/municipios.json
 │   └── management/commands/clean_expired_tokens.py
+├── docs/
+│   └── EMAIL_RESEND.md      # Dominio y correo en producción
 ├── productos/
 ├── negociacion/
 ├── pedidos/
@@ -197,6 +202,8 @@ pip install -r requirements.txt
 
 ### 3. Archivo `.env` (raíz del proyecto)
 
+Copia `.env.example` y completa los valores:
+
 ```
 SECRET_KEY=tu-clave-secreta
 DEBUG=True
@@ -208,6 +215,8 @@ DB_PORT=5432
 CLOUDINARY_CLOUD_NAME=tu_cloud_name
 CLOUDINARY_API_KEY=tu_api_key
 CLOUDINARY_API_SECRET=tu_api_secret
+RESEND_API_KEY=re_xxxxxxxx
+FRONTEND_URL=http://localhost:4200
 ```
 
 > El `.env` no debe subirse a GitHub (está en `.gitignore`).
@@ -314,10 +323,12 @@ Base URL: `http://127.0.0.1:8000/api/v1/`
 ### Registro y autenticación
 
 ```
-POST /usuarios/registro/        → cuenta inactiva + token (consola en dev)
+POST /usuarios/registro/        → cuenta inactiva + correo con enlace de verificación
 POST /usuarios/verificar-email/ → cuenta activa + JWT
 POST /usuarios/login/           → JWT (access 1 h, refresh 7 días)
 ```
+
+El registro envía un enlace a `{FRONTEND_URL}/auth/verificar-email?token=...`. En desarrollo sin `RESEND_API_KEY` el enlace se imprime en consola.
 
 ### Compra completa
 
@@ -338,14 +349,43 @@ Authorization: Bearer <access_token>
 
 ---
 
-## Producción (checklist)
+## Producción
 
-- `DEBUG=False`, `SECRET_KEY` y credenciales por entorno
-- `ALLOWED_HOSTS` con el dominio del servidor
-- `CORS_ALLOWED_ORIGINS` con la URL del frontend
-- Cache compartido (Redis) si hay varios workers (throttling consistente)
-- SMTP o servicio de correo para verificación de email
-- Cloudinary configurado
+### URLs desplegadas
+
+| Recurso | URL |
+|---------|-----|
+| API | https://agroconecta-backend-sjmy.onrender.com/api/v1 |
+| Frontend (CORS) | https://agroconecta-frontend-sigma.vercel.app |
+
+### Render
+
+- **Comando de inicio:** `gunicorn config.wsgi:application --bind 0.0.0.0:$PORT`
+- **Base de datos:** PostgreSQL (variables de entorno de Render)
+- **Rama:** `main`
+
+### Variables de entorno (Render)
+
+| Variable | Descripción |
+|----------|-------------|
+| `SECRET_KEY` | Clave Django |
+| `DEBUG` | `False` |
+| `RESEND_API_KEY` | API key de Resend |
+| `RESEND_FROM_EMAIL` | Remitente con dominio verificado (ej. `AgroConecta <noreply@tudominio.com>`) |
+| `FRONTEND_URL` | URL del frontend en Vercel |
+| `CLOUDINARY_*` | Credenciales Cloudinary |
+| Credenciales PostgreSQL | Según configuración de Render |
+
+> **Correo:** No uses SMTP en Render (puerto 587 suele bloquearse). El envío usa la API HTTP de Resend (`usuarios/email_service.py`). Para que **cualquier usuario** reciba el correo, verifica un dominio propio en Resend. Guía: [docs/EMAIL_RESEND.md](docs/EMAIL_RESEND.md).
+
+### Checklist
+
+- [x] `DEBUG=False`, `SECRET_KEY` y DB por entorno
+- [x] `CORS_ALLOWED_ORIGINS` con URL de Vercel
+- [x] Cloudinary configurado
+- [x] Correo vía API Resend (sin SMTP)
+- [ ] Dominio verificado en Resend + `RESEND_FROM_EMAIL` (envío a correos públicos)
+- [ ] Redis (opcional) si hay varios workers y se requiere throttling consistente entre procesos
 
 ---
 
