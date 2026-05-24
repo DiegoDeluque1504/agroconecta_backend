@@ -43,7 +43,7 @@ def catalogo(request):
     productos = Producto.objects.filter(
         estado='activo'
     ).select_related(
-        'categoria', 'municipio', 'usuario'
+        'categoria', 'municipio', 'usuario','usuario__municipio'
     ).prefetch_related('fotos')
 
     # Filtro por categoría

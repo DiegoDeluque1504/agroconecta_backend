@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view, permission_classes, parser_class
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
+from rest_framework.serializers import ValidationError
 from django.utils import timezone
 from notificaciones.utils import crear_notificacion
 from file_validators import validar_audio
@@ -80,14 +81,14 @@ def mis_negociaciones(request):
     como_comprador = Negociacion.objects.filter(
         comprador=request.user
     ).select_related(
-        'producto', 'producto__usuario', 'comprador'
+        'producto', 'producto__usuario', 'comprador', 'producto__municipio'
     ).prefetch_related('mensajes', 'producto__fotos')
 
     # Negociaciones donde es productor
     como_productor = Negociacion.objects.filter(
         producto__usuario=request.user
     ).select_related(
-        'producto', 'producto__usuario', 'comprador'
+        'producto', 'producto__usuario', 'comprador', 'producto__municipio'
     ).prefetch_related('mensajes', 'producto__fotos')
 
     # Combinamos y ordenamos por última actualización
@@ -195,7 +196,7 @@ def enviar_mensaje(request, negociacion_id):
 	# ── Validación de tipo y tamaño ──────────────────────────────────
         try:
             validar_audio(audio)
-        except serializers.ValidationError as e:
+        except ValidationError as e:
             return Response({'error': e.detail}, status=status.HTTP_400_BAD_REQUEST)
         # ────────────────────────────────────────────────────────────────
         resultado = cloudinary.uploader.upload(
