@@ -153,7 +153,7 @@ REST_FRAMEWORK = {
 
     'DEFAULT_THROTTLE_RATES': {
         'guest_exploration': '100/day',
-        'user': '1000/day',
+        'user': '3000/day',
     },
 
     'EXCEPTION_HANDLER': 'config.exceptions.custom_exception_handler',

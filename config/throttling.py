@@ -2,7 +2,7 @@
 Throttling de la API AgroConecta.
 
 - GuestExplorationThrottle: visitantes anónimos (100/día → modo restringido)
-- UserRateThrottle: usuarios autenticados (1000/día → 429 tradicional)
+- UserRateThrottle: usuarios autenticados (3000/día → 429 tradicional)
 
 Rutas exentas (siempre accesibles sin contar cuota de exploración):
 login, registro, verificación de email, refresh JWT, municipios.
@@ -46,5 +46,5 @@ class GuestExplorationThrottle(AnonRateThrottle):
 
 
 class AuthenticatedUserRateThrottle(UserRateThrottle):
-    """Rate limit tradicional para usuarios autenticados (1000/día)."""
+    """Rate limit tradicional para usuarios autenticados (3000/día)."""
     scope = 'user'

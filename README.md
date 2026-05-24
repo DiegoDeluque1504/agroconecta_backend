@@ -105,7 +105,7 @@ agroconectabackend/
 | Tipo de usuario | Límite | HTTP | Código de error |
 |---|---|---|---|
 | Visitante anónimo (exploración) | 100 peticiones/día por IP | 403 | `guest_exploration_limit` |
-| Usuario autenticado | 1000 peticiones/día | 429 | `api_rate_limit` |
+| Usuario autenticado | 3000 peticiones/día | 429 | `api_rate_limit` |
 
 Rutas **exentas** del límite de invitado: `registro`, `login`, `verificar-email`, `token/refresh`, `municipios`.
 
