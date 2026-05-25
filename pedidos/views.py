@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db import transaction
+from django.db.models import Avg, Count
 from notificaciones.utils import crear_notificacion
 
 from .models import Pedido, HistorialEstadoPedido, Calificacion
@@ -317,12 +318,13 @@ def calificar(request, pedido_id):
         )
 
         # Actualiza el promedio de calificaciones del usuario calificado
-        todas_calificaciones = Calificacion.objects.filter(calificado=calificado)
-        total = todas_calificaciones.count()
-        promedio = sum(c.puntuacion for c in todas_calificaciones) / total
-
-        calificado.calificacion_promedio = round(promedio, 2)
-        calificado.total_calificaciones = total
+        resultado = Calificacion.objects.filter(calificado=calificado).aggregate(
+        promedio=Avg('puntuacion'),
+        total=Count('id')
+        )
+        
+        calificado.calificacion_promedio = round(resultado['promedio'] or 0, 2)
+        calificado.total_calificaciones = resultado['total'] or 0
         calificado.save()
 
         # Notifica al calificado que recibió una calificación
