@@ -166,13 +166,33 @@ def gestionar_producto(request, producto_id):
         )
 
     if request.method == 'DELETE':
-        for foto in producto.fotos.all():
-            cloudinary.uploader.destroy(foto.public_id_cloudinary)
-        producto.delete()
-        return Response(
-            {'mensaje': 'Producto eliminado correctamente.'},
-            status=status.HTTP_200_OK
-        )
+        from django.db.models import ProtectedError
+        try:
+            # Guardamos las referencias a las fotos antes de borrar de la base de datos
+            fotos_a_eliminar = list(producto.fotos.all())
+            
+            # Intentamos eliminar el producto de la base de datos.
+            # Si tiene pedidos o referencias protegidas, lanzará ProtectedError y no se borrará nada.
+            producto.delete()
+            
+            # Si la eliminación en BD fue exitosa, procedemos a borrar de Cloudinary
+            for foto in fotos_a_eliminar:
+                cloudinary.uploader.destroy(foto.public_id_cloudinary)
+                
+            return Response(
+                {'mensaje': 'Producto eliminado correctamente.'},
+                status=status.HTTP_200_OK
+            )
+        except ProtectedError:
+            return Response(
+                {
+                    'error': (
+                        'No se puede eliminar este producto porque está asociado a pedidos o negociaciones en curso. '
+                        'Te sugerimos cambiar su estado a "Inactivo" para que no aparezca en el catálogo público.'
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     if request.method in ['PUT', 'PATCH']:
         serializer = ProductoDetalleSerializer(
