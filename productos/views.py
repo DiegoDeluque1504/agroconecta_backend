@@ -144,7 +144,7 @@ def crear_producto(request):
     )
 
 
-@api_view(['PUT', 'DELETE'])
+@api_view(['PUT', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated, EsProductor])
 def gestionar_producto(request, producto_id):
     """
@@ -174,7 +174,7 @@ def gestionar_producto(request, producto_id):
             status=status.HTTP_200_OK
         )
 
-    if request.method == 'PUT':
+    if request.method in ['PUT', 'PATCH']:
         serializer = ProductoDetalleSerializer(
             producto,
             data=request.data,
