@@ -164,6 +164,8 @@ REST_FRAMEWORK = {
 # CORS
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:4200',
+    'https://agroconectaguajira.online',
+    'https://www.agroconectaguajira.online',
     'https://agroconecta-frontend-sigma.vercel.app',
 ]
 
