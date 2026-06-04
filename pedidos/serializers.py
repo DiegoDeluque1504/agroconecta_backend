@@ -90,6 +90,14 @@ class PedidoListSerializer(serializers.ModelSerializer):
     )
     comprador_nombre = serializers.SerializerMethodField()
     productor_nombre = serializers.SerializerMethodField()
+    productor_id = serializers.IntegerField(
+        source='negociacion.producto.usuario.id',
+        read_only=True
+    )
+    comprador_id = serializers.IntegerField(
+        source='negociacion.comprador.id',
+        read_only=True
+    )
 
     class Meta:
         model = Pedido
@@ -102,6 +110,8 @@ class PedidoListSerializer(serializers.ModelSerializer):
             'producto_nombre',
             'comprador_nombre',
             'productor_nombre',
+            'productor_id',
+            'comprador_id',
             'created_at',
         ]
 
@@ -129,6 +139,14 @@ class PedidoDetalleSerializer(serializers.ModelSerializer):
     )
     comprador_nombre = serializers.SerializerMethodField()
     productor_nombre = serializers.SerializerMethodField()
+    productor_id = serializers.IntegerField(
+        source='negociacion.producto.usuario.id',
+        read_only=True
+    )
+    comprador_id = serializers.IntegerField(
+        source='negociacion.comprador.id',
+        read_only=True
+    )
     historial_estados = HistorialEstadoSerializer(many=True, read_only=True)
     calificaciones = CalificacionSerializer(many=True, read_only=True)
     ya_califique = serializers.SerializerMethodField()
@@ -148,6 +166,8 @@ class PedidoDetalleSerializer(serializers.ModelSerializer):
             'producto_id',
             'comprador_nombre',
             'productor_nombre',
+            'productor_id',
+            'comprador_id',
             'historial_estados',
             'calificaciones',
             'ya_califique',

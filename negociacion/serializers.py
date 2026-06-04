@@ -78,6 +78,7 @@ class NegociacionListSerializer(serializers.ModelSerializer):
     productor_nombre = serializers.SerializerMethodField()
     ultimo_mensaje = serializers.SerializerMethodField()
     mensajes_no_leidos = serializers.SerializerMethodField()
+    pedido_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Negociacion
@@ -90,9 +91,13 @@ class NegociacionListSerializer(serializers.ModelSerializer):
             'productor_nombre',
             'ultimo_mensaje',
             'mensajes_no_leidos',
+            'pedido_id',
             'created_at',
             'updated_at',
         ]
+
+    def get_pedido_id(self, obj):
+        return obj.pedido.id if hasattr(obj, 'pedido') else None
 
     def get_producto_foto(self, obj):
         foto = obj.producto.fotos.filter(es_principal=True).first()
@@ -137,6 +142,7 @@ class NegociacionDetalleSerializer(serializers.ModelSerializer):
         source='producto.id',
         read_only=True
     )
+    pedido_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Negociacion
@@ -151,8 +157,12 @@ class NegociacionDetalleSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
             'productor_id',
-            'comprador_id'
+            'comprador_id',
+            'pedido_id'
         ]
+
+    def get_pedido_id(self, obj):
+        return obj.pedido.id if hasattr(obj, 'pedido') else None
 
     def get_comprador_nombre(self, obj):
         return f'{obj.comprador.first_name} {obj.comprador.last_name}'

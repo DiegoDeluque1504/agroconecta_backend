@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db import transaction
 from django.db.models import Avg, Count
+from django.utils import timezone
 from notificaciones.utils import crear_notificacion
 
 from .models import Pedido, HistorialEstadoPedido, Calificacion
@@ -70,7 +71,7 @@ def crear_pedido(request, negociacion_id):
             cantidad_acordada=datos['cantidad_acordada'],
             precio_acordado=datos['precio_acordado'],
             precio_total=precio_total,
-            estado_actual='pendiente',
+            estado_actual='confirmado',
             direccion_entrega=datos.get('direccion_entrega', ''),
             notas_entrega=datos.get('notas_entrega', ''),
         )
@@ -79,8 +80,8 @@ def crear_pedido(request, negociacion_id):
         HistorialEstadoPedido.objects.create(
             pedido=pedido,
             registrado_por=request.user,
-            estado='pendiente',
-            observacion='Pedido creado. Pendiente de confirmación.'
+            estado='confirmado',
+            observacion='Pedido creado y activo.'
         )
 
         #Descontar stock del producto al crear el pedido
@@ -101,9 +102,9 @@ def crear_pedido(request, negociacion_id):
         # Notifica al comprador que su pedido fue creado
         crear_notificacion(
             usuario=negociacion.comprador,
-            tipo='pedido_pendiente',
+            tipo='pedido_creado',
             titulo='Nuevo pedido creado',
-            mensaje=f'{request.user.first_name} {request.user.last_name} creó una propuesta de pedido sobre {negociacion.producto.nombre}.',
+            mensaje=f'{request.user.first_name} {request.user.last_name} creó el pedido sobre {negociacion.producto.nombre}.',
             url_destino=f'/pedidos/{pedido.id}'
         )
 
