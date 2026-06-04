@@ -6,7 +6,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework.serializers import ValidationError
 from django.utils import timezone
-from notificaciones.utils import crear_notificacion
+from notificaciones.models import Notificacion
 from file_validators import validar_audio
 import cloudinary.uploader
 
@@ -223,7 +223,7 @@ def enviar_mensaje(request, negociacion_id):
     else:
         destinatario = negociacion.comprador
 
-    crear_notificacion(
+    Notificacion.objects.create(
         usuario=destinatario,
         tipo='mensaje_nuevo',
         titulo='Mensaje nuevo',
