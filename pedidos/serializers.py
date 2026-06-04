@@ -132,6 +132,7 @@ class PedidoDetalleSerializer(serializers.ModelSerializer):
     historial_estados = HistorialEstadoSerializer(many=True, read_only=True)
     calificaciones = CalificacionSerializer(many=True, read_only=True)
     ya_califique = serializers.SerializerMethodField()
+    cancelado_por_nombre = serializers.SerializerMethodField()
 
     class Meta:
         model = Pedido
@@ -150,6 +151,10 @@ class PedidoDetalleSerializer(serializers.ModelSerializer):
             'historial_estados',
             'calificaciones',
             'ya_califique',
+            'cancelado_por',
+            'cancelado_por_nombre',
+            'motivo_cancelacion',
+            'fecha_cancelacion',
             'created_at',
             'updated_at',
         ]
@@ -168,6 +173,11 @@ class PedidoDetalleSerializer(serializers.ModelSerializer):
         if not request:
             return False
         return obj.calificaciones.filter(calificador=request.user).exists()
+
+    def get_cancelado_por_nombre(self, obj):
+        if obj.cancelado_por:
+            return f'{obj.cancelado_por.first_name} {obj.cancelado_por.last_name}'
+        return None
 
 
 class CrearPedidoSerializer(serializers.Serializer):
@@ -200,7 +210,8 @@ class ActualizarEstadoSerializer(serializers.Serializer):
     Serializer para actualizar el estado de un pedido.
     """
     estado = serializers.ChoiceField(choices=[
-        'en_preparacion',
+        'confirmado',
+        'preparacion',
         'en_camino',
         'entregado',
         'cancelado',

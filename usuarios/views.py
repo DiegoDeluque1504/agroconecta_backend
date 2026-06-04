@@ -14,8 +14,10 @@ import uuid
 import secrets
 from datetime import timedelta
 
-from .email_service import EmailSendError, enviar_correo_verificacion
-from .models import Usuario, Municipio, TokenVerificacion
+from .email_service import EmailSendError, enviar_correo_verificacion, enviar_alerta_nuevo_dispositivo
+from .models import Usuario, Municipio, TokenVerificacion, DispositivoConfiable
+from .captcha_utils import validar_captcha
+from .device_utils import get_client_ip, parse_user_agent
 from .serializers import (
     RegistroSerializer,
     UsuarioPerfilSerializer,
@@ -54,6 +56,18 @@ def registro(request):
     Crea la cuenta inactiva y genera un token de verificación
     enviado por correo electrónico.
     """
+    # Validación del CAPTCHA
+    captcha_token = request.data.get('captcha_token')
+    ip = get_client_ip(request)
+    if not validar_captcha(captcha_token, ip):
+        return Response(
+            {
+                'code': 'captcha_invalid',
+                'error': 'CAPTCHA inválido o no completado.'
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
     email = (request.data.get('email') or '').strip().lower()
 
     if email and _tiene_token_verificacion_activo(email):
@@ -191,6 +205,18 @@ def login(request):
     Endpoint de inicio de sesión.
     Recibe email y contraseña, devuelve tokens JWT si las credenciales son válidas.
     """
+    # Validación del CAPTCHA
+    captcha_token = request.data.get('captcha_token')
+    client_ip = get_client_ip(request)
+    if not validar_captcha(captcha_token, client_ip):
+        return Response(
+            {
+                'code': 'captcha_invalid',
+                'error': 'CAPTCHA inválido o no completado.'
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
     serializer = LoginSerializer(data=request.data)
 
     if not serializer.is_valid():
@@ -231,6 +257,33 @@ def login(request):
             {'error': 'Tu cuenta está desactivada. Contacta al soporte.'},
             status=status.HTTP_403_FORBIDDEN
         )
+
+    # Reconocimiento de dispositivo
+    user_agent_str = request.META.get('HTTP_USER_AGENT', '')
+    navegador, sistema_operativo = parse_user_agent(user_agent_str)
+
+    dispositivo, creado = DispositivoConfiable.objects.get_or_create(
+        usuario=usuario,
+        user_agent=user_agent_str,
+        defaults={
+            'ip': client_ip,
+            'navegador': navegador,
+            'sistema_operativo': sistema_operativo
+        }
+    )
+
+    if creado:
+        enviar_alerta_nuevo_dispositivo(
+            destinatario=usuario.email,
+            nombre=usuario.first_name,
+            ip=client_ip,
+            navegador=navegador,
+            sistema_operativo=sistema_operativo,
+            fecha_hora=timezone.now()
+        )
+    else:
+        dispositivo.ip = client_ip
+        dispositivo.save()
 
     tokens = generar_tokens_jwt(usuario)
 

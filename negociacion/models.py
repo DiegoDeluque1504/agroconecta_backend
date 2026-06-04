@@ -12,7 +12,8 @@ class Negociacion(models.Model):
 
     class EstadoNegociacion(models.TextChoices):
         ABIERTA = 'abierta', 'Abierta'
-        CERRADA = 'cerrada', 'Cerrada'
+        PEDIDO_CREADO = 'pedido_creado', 'Pedido Creado'
+        FINALIZADA = 'finalizada', 'Finalizada'
         CANCELADA = 'cancelada', 'Cancelada'
 
     comprador = models.ForeignKey(
@@ -26,7 +27,7 @@ class Negociacion(models.Model):
         related_name='negociaciones'
     )
     estado = models.CharField(
-        max_length=10,
+        max_length=20,
         choices=EstadoNegociacion.choices,
         default=EstadoNegociacion.ABIERTA
     )
@@ -81,6 +82,7 @@ class Mensaje(models.Model):
     # Estado de lectura
     leido = models.BooleanField(default=False)
     leido_en = models.DateTimeField(blank=True, null=True)
+    correo_recordatorio_enviado = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
 

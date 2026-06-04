@@ -170,7 +170,7 @@ def enviar_mensaje(request, negociacion_id):
             status=status.HTTP_403_FORBIDDEN
         )
 
-    if negociacion.estado != 'abierta':
+    if negociacion.estado not in ['abierta', 'pedido_creado']:
         return Response(
             {'error': 'Esta negociación está cerrada y no acepta más mensajes.'},
             status=status.HTTP_400_BAD_REQUEST
@@ -263,17 +263,17 @@ def cambiar_estado_negociacion(request, negociacion_id):
 
     nuevo_estado = request.data.get('estado')
 
-    estados_validos = ['cerrada', 'cancelada']
+    estados_validos = ['finalizada', 'cancelada']
     if nuevo_estado not in estados_validos:
         return Response(
             {'error': f'Estado inválido. Opciones: {estados_validos}'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # El comprador solo puede cancelar, no cerrar
-    if es_comprador and nuevo_estado == 'cerrada':
+    # El comprador solo puede cancelar, no finalizar
+    if es_comprador and nuevo_estado == 'finalizada':
         return Response(
-            {'error': 'Solo el productor puede cerrar una negociación.'},
+            {'error': 'Solo el productor puede finalizar una negociación.'},
             status=status.HTTP_403_FORBIDDEN
         )
 

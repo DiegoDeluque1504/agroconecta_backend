@@ -101,3 +101,61 @@ def enviar_correo_verificacion(destinatario, nombre, enlace_verificacion):
         )
 
     return response.json()
+
+
+def enviar_alerta_nuevo_dispositivo(destinatario, nombre, ip, navegador, sistema_operativo, fecha_hora):
+    """
+    Envía una alerta de inicio de sesión desde un nuevo dispositivo vía API de Resend.
+    """
+    _validar_configuracion_correo()
+
+    api_key = settings.RESEND_API_KEY
+    if not api_key:
+        if settings.DEBUG:
+            logger.warning(
+                '[DEV] RESEND_API_KEY no configurada. Alerta de nuevo dispositivo para %s: IP=%s, Nav=%s, OS=%s',
+                destinatario, ip, navegador, sistema_operativo
+            )
+            return {'id': 'dev-console'}
+        return
+
+    payload = {
+        'from': settings.DEFAULT_FROM_EMAIL,
+        'to': [destinatario],
+        'subject': 'Inicio de sesión desde un nuevo dispositivo - AgroConecta',
+        'html': f'''
+        <h2>Hola {nombre},</h2>
+        <p>Se detectó un inicio de sesión desde un nuevo dispositivo en tu cuenta de <strong>AgroConecta</strong>.</p>
+        <p><strong>Detalles del inicio de sesión:</strong></p>
+        <ul>
+            <li><strong>Sistema Operativo:</strong> {sistema_operativo}</li>
+            <li><strong>Navegador:</strong> {navegador}</li>
+            <li><strong>Dirección IP:</strong> {ip}</li>
+            <li><strong>Fecha y Hora:</strong> {fecha_hora.strftime('%Y-%m-%d %H:%M:%S UTC')}</li>
+        </ul>
+        <p>Si fuiste tú, no es necesario realizar ninguna acción.</p>
+        <p>Si no reconoces este inicio de sesión, te recomendamos cambiar tu contraseña inmediatamente desde tu perfil para asegurar tu cuenta.</p>
+        <br>
+        <p>El equipo de AgroConecta</p>
+        ''',
+    }
+
+    try:
+        response = requests.post(
+            'https://api.resend.com/emails',
+            json=payload,
+            headers={
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json',
+            },
+            timeout=15,
+        )
+        if response.status_code >= 400:
+            logger.error(
+                'Resend API de Alerta respondió %s: %s',
+                response.status_code,
+                response.text,
+            )
+    except requests.RequestException:
+        logger.exception('Error de red al enviar correo de alerta de nuevo dispositivo con Resend')
+

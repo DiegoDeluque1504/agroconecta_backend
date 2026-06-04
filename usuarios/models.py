@@ -105,3 +105,30 @@ class TokenVerificacion(models.Model):
 
     def __str__(self):
         return f'Token de {self.usuario.email}'
+
+
+class DispositivoConfiable(models.Model):
+    """
+    Registra los dispositivos desde los cuales el usuario ha iniciado sesión.
+    Se utiliza para detectar accesos sospechosos o desde dispositivos nuevos.
+    """
+    usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name='dispositivos_confiables'
+    )
+    user_agent = models.TextField()
+    ip = models.GenericIPAddressField(blank=True, null=True)
+    navegador = models.CharField(max_length=50, blank=True, null=True)
+    sistema_operativo = models.CharField(max_length=50, blank=True, null=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    ultimo_acceso = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'dispositivo_confiable'
+        unique_together = [['usuario', 'user_agent']]
+        verbose_name = 'Dispositivo Confiable'
+        verbose_name_plural = 'Dispositivos Confiables'
+
+    def __str__(self):
+        return f'{self.navegador} en {self.sistema_operativo} ({self.usuario.email})'

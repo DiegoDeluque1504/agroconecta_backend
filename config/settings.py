@@ -8,11 +8,11 @@ from datetime import timedelta
 import os
 import cloudinary
 
-# Cargar .env solo en desarrollo local
-if os.path.exists('.env'):
-    load_dotenv()
-
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Cargar .env solo en desarrollo local
+if (BASE_DIR / '.env').exists():
+    load_dotenv(BASE_DIR / '.env')
 
 # Seguridad
 SECRET_KEY = os.environ.get('SECRET_KEY')
@@ -110,12 +110,18 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8,
+        }
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+    {
+        'NAME': 'usuarios.validators.AgroConectaPasswordValidator',
     },
 ]
 
@@ -201,6 +207,11 @@ elif DEBUG:
     DEFAULT_FROM_EMAIL = 'AgroConecta <onboarding@resend.dev>'
 else:
     DEFAULT_FROM_EMAIL = ''
+
+# Cloudflare Turnstile CAPTCHA
+TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY', '')
+TURNSTILE_SITE_KEY = os.environ.get('TURNSTILE_SITE_KEY', '')
+
 
 FRONTEND_URL = os.getenv(
     'FRONTEND_URL',

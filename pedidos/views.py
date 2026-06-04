@@ -70,7 +70,7 @@ def crear_pedido(request, negociacion_id):
             cantidad_acordada=datos['cantidad_acordada'],
             precio_acordado=datos['precio_acordado'],
             precio_total=precio_total,
-            estado_actual='confirmado',
+            estado_actual='pendiente',
             direccion_entrega=datos.get('direccion_entrega', ''),
             notas_entrega=datos.get('notas_entrega', ''),
         )
@@ -79,8 +79,8 @@ def crear_pedido(request, negociacion_id):
         HistorialEstadoPedido.objects.create(
             pedido=pedido,
             registrado_por=request.user,
-            estado='confirmado',
-            observacion='Pedido creado y confirmado.'
+            estado='pendiente',
+            observacion='Pedido creado. Pendiente de confirmación.'
         )
 
         #Descontar stock del producto al crear el pedido
@@ -94,17 +94,17 @@ def crear_pedido(request, negociacion_id):
         
         producto.save()
 
-        # Cierra la negociación
-        negociacion.estado = 'cerrada'
+        # Actualiza el estado de la negociación a 'pedido_creado'
+        negociacion.estado = 'pedido_creado'
         negociacion.save()
 
-        # Notifica al comprador que su pedido fue confirmado
+        # Notifica al comprador que su pedido fue creado
         crear_notificacion(
-        usuario=negociacion.comprador,
-        tipo='pedido_confirmado',
-        titulo='Pedido confirmado',
-        mensaje=f'{request.user.first_name} {request.user.last_name} confirmó tu pedido de {negociacion.producto.nombre}.',
-        url_destino=f'/pedidos/{pedido.id}'
+            usuario=negociacion.comprador,
+            tipo='pedido_pendiente',
+            titulo='Nuevo pedido creado',
+            mensaje=f'{request.user.first_name} {request.user.last_name} creó una propuesta de pedido sobre {negociacion.producto.nombre}.',
+            url_destino=f'/pedidos/{pedido.id}'
         )
 
     return Response(
@@ -225,6 +225,21 @@ def actualizar_estado(request, pedido_id):
 
     with transaction.atomic():
         pedido.estado_actual = nuevo_estado
+        
+        if nuevo_estado == 'cancelado':
+            pedido.cancelado_por = request.user
+            pedido.fecha_cancelacion = timezone.now()
+            pedido.motivo_cancelacion = serializer.validated_data.get('observacion', '')
+            
+            # Cancelar negociación de fondo
+            pedido.negociacion.estado = 'cancelada'
+            pedido.negociacion.save()
+            
+        elif nuevo_estado == 'entregado':
+            # Finalizar negociación de fondo
+            pedido.negociacion.estado = 'finalizada'
+            pedido.negociacion.save()
+
         pedido.save()
 
         HistorialEstadoPedido.objects.create(

@@ -12,8 +12,9 @@ class Pedido(models.Model):
     """
 
     class EstadoPedido(models.TextChoices):
+        PENDIENTE = 'pendiente', 'Pendiente'
         CONFIRMADO = 'confirmado', 'Confirmado'
-        EN_PREPARACION = 'en_preparacion', 'En preparación'
+        PREPARACION = 'preparacion', 'En preparación'
         EN_CAMINO = 'en_camino', 'En camino'
         ENTREGADO = 'entregado', 'Entregado'
         CANCELADO = 'cancelado', 'Cancelado'
@@ -41,12 +42,23 @@ class Pedido(models.Model):
     estado_actual = models.CharField(
         max_length=15,
         choices=EstadoPedido.choices,
-        default=EstadoPedido.CONFIRMADO
+        default=EstadoPedido.PENDIENTE
     )
 
     # Información de entrega
     direccion_entrega = models.CharField(max_length=500, blank=True, null=True)
     notas_entrega = models.TextField(blank=True, null=True)
+
+    # Información de cancelación
+    cancelado_por = models.ForeignKey(
+        Usuario,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='pedidos_cancelados'
+    )
+    motivo_cancelacion = models.TextField(blank=True, null=True)
+    fecha_cancelacion = models.DateTimeField(blank=True, null=True)
 
     # Auditoría
     created_at = models.DateTimeField(auto_now_add=True)
@@ -70,8 +82,9 @@ class HistorialEstadoPedido(models.Model):
     """
 
     class EstadoPedido(models.TextChoices):
+        PENDIENTE = 'pendiente', 'Pendiente'
         CONFIRMADO = 'confirmado', 'Confirmado'
-        EN_PREPARACION = 'en_preparacion', 'En preparación'
+        PREPARACION = 'preparacion', 'En preparación'
         EN_CAMINO = 'en_camino', 'En camino'
         ENTREGADO = 'entregado', 'Entregado'
         CANCELADO = 'cancelado', 'Cancelado'
