@@ -12,6 +12,18 @@ AgroConecta conecta productores agrícolas con compradores eliminando intermedia
 
 ---
 
+## 🚀 Refactorización de Seguridad y Funcional (Junio 2026)
+
+- **Reconocimiento de Dispositivo:** Se registra la IP, User-Agent, navegador y sistema operativo de cada inicio de sesión. Si el dispositivo es nuevo, se envía una alerta por correo a través de Resend.
+- **Validación de CAPTCHA (Cloudflare Turnstile):** Implementación de verificación en el backend de tokens de Turnstile para evitar registros y logins automatizados.
+- **Validación Estricta de Contraseñas:** Se exige que la contraseña contenga un mínimo de 8 caracteres, al menos una letra y al menos un número (tanto en backend como en frontend).
+- **Flujo Simplificado de Verificación:** Al registrarse, el usuario recibe un correo con un enlace de verificación directa. Al hacer clic, se activa la cuenta y se le redirige directamente al login sin ingresar códigos manuales.
+- **Rediseño del Flujo de Negociación:** La creación de un pedido ya no cierra la conversación. El chat permanece disponible en el estado `pedido_creado` para coordinar la entrega. Solo se finaliza o cancela al entregar o cancelar el pedido.
+- **Cancelación Mutua de Pedidos:** Tanto productores como compradores pueden cancelar un pedido indicando un motivo obligatorio, el cual queda registrado (`cancelado_por`, `motivo_cancelacion`, `fecha_cancelacion`) y se muestra en la interfaz.
+- **Recordatorio de Mensajes No Leídos:** Un comando en segundo plano busca mensajes no leídos con más de 10 minutos y envía un correo consolidado por destinatario para notificar sobre los mensajes pendientes.
+
+---
+
 ## Integrantes
 
 | Nombre | Rol |
@@ -86,15 +98,16 @@ agroconectabackend/
 
 | Estado | Descripción |
 |---|---|
-| `abierta` | En curso; acepta mensajes y permite crear pedido |
-| `cerrada` | Terminada **con pedido** (al formalizar) o **sin acuerdo** (productor cierra manualmente) |
-| `cancelada` | Cancelada por alguna de las partes |
+| `abierta` | En curso; acepta mensajes y permite crear propuesta de pedido |
+| `pedido_creado` | Se ha creado la propuesta de pedido. El chat sigue abierto para coordinar la entrega |
+| `finalizada` | El pedido ha sido entregado con éxito; ya no se aceptan nuevos mensajes |
+| `cancelada` | La negociación o el pedido fue cancelada por alguna de las partes |
 
-> El pedido solo se crea desde una negociación en estado `abierta`. Si el productor cierra sin acuerdo, la negociación pasa a `cerrada` y ya no se puede crear pedido.
+> El pedido solo se crea desde una negociación en estado `abierta`. Al crearse el pedido, la negociación pasa a `pedido_creado` manteniendo la comunicación activa.
 
 ### Pedido
 
-`confirmado` → `en_preparacion` → `en_camino` → `entregado` (o `cancelado` en cualquier momento).
+`pendiente` (esperando confirmación del comprador) → `confirmado` → `preparacion` → `en_camino` → `entregado` (o `cancelado` en cualquier momento).
 
 ---
 
@@ -165,6 +178,14 @@ Si un correo ya tiene cuenta sin verificar y un token vigente, responde **400**:
 ```bash
 python manage.py clean_expired_tokens --dry-run
 python manage.py clean_expired_tokens
+```
+
+### Recordatorio de mensajes no leídos
+
+Busca mensajes que no hayan sido leídos por más de 10 minutos y envía un correo consolidado de recordatorio usando la API de Resend:
+
+```bash
+python manage.py enviar_recordatorios
 ```
 
 ---
