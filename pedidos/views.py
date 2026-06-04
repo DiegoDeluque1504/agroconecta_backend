@@ -17,6 +17,25 @@ from .serializers import (
 )
 from negociacion.models import Negociacion
 
+# Transiciones permitidas (debe coincidir con el flujo del frontend)
+TRANSICIONES_PEDIDO = {
+    'pendiente': ['confirmado', 'cancelado'],
+    'confirmado': ['preparacion', 'cancelado'],
+    'preparacion': ['en_camino', 'cancelado'],
+    'en_camino': ['entregado'],
+    'entregado': [],
+    'cancelado': [],
+}
+
+
+def _restaurar_stock_pedido(pedido):
+    """Devuelve el stock reservado al cancelar un pedido."""
+    producto = pedido.negociacion.producto
+    producto.cantidad_disponible += pedido.cantidad_acordada
+    if producto.estado == 'agotado':
+        producto.estado = 'activo'
+    producto.save()
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -187,8 +206,9 @@ def actualizar_estado(request, pedido_id):
     """
     try:
         pedido = Pedido.objects.select_related(
+            'negociacion__producto',
             'negociacion__producto__usuario',
-            'negociacion__comprador'
+            'negociacion__comprador',
         ).get(id=pedido_id)
     except Pedido.DoesNotExist:
         return Response(
@@ -217,11 +237,23 @@ def actualizar_estado(request, pedido_id):
 
     nuevo_estado = serializer.validated_data['estado']
 
-    # El comprador solo puede cancelar
+    # El comprador solo puede cancelar; el productor avanza el flujo logístico
     if es_comprador and nuevo_estado != 'cancelado':
         return Response(
             {'error': 'Como comprador solo puedes cancelar el pedido.'},
             status=status.HTTP_403_FORBIDDEN
+        )
+    if nuevo_estado != 'cancelado' and not es_productor:
+        return Response(
+            {'error': 'Solo el productor puede avanzar el estado del pedido.'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    permitidos = TRANSICIONES_PEDIDO.get(pedido.estado_actual, [])
+    if nuevo_estado not in permitidos:
+        return Response(
+            {'error': f'No se puede pasar de "{pedido.estado_actual}" a "{nuevo_estado}".'},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
     with transaction.atomic():
@@ -235,6 +267,8 @@ def actualizar_estado(request, pedido_id):
             # Cancelar negociación de fondo
             pedido.negociacion.estado = 'cancelada'
             pedido.negociacion.save()
+
+            _restaurar_stock_pedido(pedido)
             
         elif nuevo_estado == 'entregado':
             # Finalizar negociación de fondo

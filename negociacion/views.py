@@ -81,14 +81,14 @@ def mis_negociaciones(request):
     como_comprador = Negociacion.objects.filter(
         comprador=request.user
     ).select_related(
-        'producto', 'producto__usuario', 'comprador', 'producto__municipio'
+        'producto', 'producto__usuario', 'comprador', 'producto__municipio', 'pedido'
     ).prefetch_related('mensajes', 'producto__fotos')
 
     # Negociaciones donde es productor
     como_productor = Negociacion.objects.filter(
         producto__usuario=request.user
     ).select_related(
-        'producto', 'producto__usuario', 'comprador', 'producto__municipio'
+        'producto', 'producto__usuario', 'comprador', 'producto__municipio', 'pedido'
     ).prefetch_related('mensajes', 'producto__fotos')
 
     # Combinamos y ordenamos por última actualización

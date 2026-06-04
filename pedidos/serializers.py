@@ -230,6 +230,7 @@ class ActualizarEstadoSerializer(serializers.Serializer):
     Serializer para actualizar el estado de un pedido.
     """
     estado = serializers.ChoiceField(choices=[
+        'pendiente',
         'confirmado',
         'preparacion',
         'en_camino',
