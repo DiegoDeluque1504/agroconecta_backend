@@ -1,6 +1,7 @@
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes, parser_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes, parser_classes, throttle_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.conf import settings
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework.serializers import ValidationError
@@ -10,6 +11,7 @@ from file_validators import validar_audio
 import cloudinary.uploader
 
 from .models import Negociacion, Mensaje
+from .recordatorios import procesar_recordatorios_mensajes
 from .serializers import (
     NegociacionListSerializer,
     NegociacionDetalleSerializer,
@@ -284,3 +286,30 @@ def cambiar_estado_negociacion(request, negociacion_id):
         NegociacionDetalleSerializer(negociacion).data,
         status=status.HTTP_200_OK
     )
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+@throttle_classes([])
+def ejecutar_recordatorios_cron(request):
+    """
+    Ejecuta recordatorios de mensajes no leídos.
+    Pensado para cron gratuito externo (cron-job.org, GitHub Actions), no para Render Cron de pago.
+    Protegido con CRON_SECRET en cabecera X-Cron-Secret o query ?secret=
+    """
+    secret = request.headers.get('X-Cron-Secret') or request.GET.get('secret')
+    expected = settings.CRON_SECRET
+
+    if not expected:
+        return Response(
+            {'error': 'CRON_SECRET no configurado en el servidor.'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+    if secret != expected:
+        return Response(
+            {'error': 'No autorizado.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    resultado = procesar_recordatorios_mensajes()
+    return Response(resultado, status=status.HTTP_200_OK)

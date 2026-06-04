@@ -180,13 +180,19 @@ python manage.py clean_expired_tokens --dry-run
 python manage.py clean_expired_tokens
 ```
 
-### Recordatorio de mensajes no leídos
+### Correos automáticos (notificaciones y alertas)
 
-Busca mensajes que no hayan sido leídos por más de 10 minutos y envía un correo consolidado de recordatorio usando la API de Resend:
+Al crear una notificación in-app (`crear_notificacion`) se envía el mismo aviso por correo vía Resend (mensajes, pedidos, calificaciones). La alerta de **nuevo dispositivo** se envía sola al detectar un login desde un navegador no registrado.
+
+### Recordatorio de mensajes no leídos (Cron en Render)
+
+Si un mensaje sigue sin leerse más de 10 minutos, un **Cron Job** en Render debe ejecutar cada 10 minutos:
 
 ```bash
 python manage.py enviar_recordatorios
 ```
+
+Guía gratuita (sin Render Cron de pago): [docs/CRON_GRATIS.md](docs/CRON_GRATIS.md)
 
 ---
 

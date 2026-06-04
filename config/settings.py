@@ -218,6 +218,9 @@ FRONTEND_URL = os.getenv(
     'http://localhost:4200'
 )
 
+# Token para activar recordatorios vía HTTP (cron-job.org, GitHub Actions, etc.)
+CRON_SECRET = os.getenv('CRON_SECRET', '')
+
 # Seguridad HTTP
 X_FRAME_OPTIONS = 'DENY'
 SECURE_BROWSER_XSS_FILTER = True

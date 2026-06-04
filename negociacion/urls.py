@@ -2,6 +2,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Recordatorios (cron gratuito externo; ver docs/CRON_GRATIS.md)
+    path('cron/recordatorios/', views.ejecutar_recordatorios_cron, name='cron-recordatorios'),
+
     # Iniciar negociación sobre un producto
     path('iniciar/<int:producto_id>/', views.iniciar_negociacion, name='iniciar-negociacion'),
 
