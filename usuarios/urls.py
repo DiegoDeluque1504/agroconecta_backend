@@ -13,6 +13,10 @@ urlpatterns = [
     path('perfil/', views.perfil, name='perfil'),
     path('cambiar-password/', views.cambiar_password, name='cambiar-password'),
 
+    # Recuperacion de contrasena
+    path('recuperar-password/', views.solicitar_recuperacion, name='solicitar-recuperacion'),
+    path('confirmar-recuperacion/', views.confirmar_recuperacion, name='confirmar-recuperacion'),
+
     # Datos de referencia
     path('municipios/', views.listar_municipios, name='listar-municipios'),
 ]

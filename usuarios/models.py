@@ -132,3 +132,33 @@ class DispositivoConfiable(models.Model):
 
     def __str__(self):
         return f'{self.navegador} en {self.sistema_operativo} ({self.usuario.email})'
+
+import uuid as _uuid
+
+
+class TokenRecuperacion(models.Model):
+    """
+    Token temporal para recuperar la contrasena olvidada.
+    Expira en 1 hora y se marca como usado tras el primer uso.
+    Permite multiples tokens por usuario (ForeignKey en lugar de OneToOneField)
+    para manejar el caso donde el usuario solicita multiples veces.
+    """
+
+    usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name='tokens_recuperacion'
+    )
+    token = models.UUIDField(default=_uuid.uuid4, unique=True)
+    expira_en = models.DateTimeField()
+    usado = models.BooleanField(default=False)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'token_recuperacion'
+        verbose_name = 'Token de Recuperacion'
+        verbose_name_plural = 'Tokens de Recuperacion'
+        ordering = ['-creado_en']
+
+    def __str__(self):
+        return f'Recuperacion de {self.usuario.email}'

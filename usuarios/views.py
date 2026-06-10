@@ -14,11 +14,13 @@ import uuid
 import secrets
 from datetime import timedelta
 
-from .email_service import EmailSendError, enviar_correo_verificacion, enviar_alerta_nuevo_dispositivo
-from .models import Usuario, Municipio, TokenVerificacion, DispositivoConfiable
+from .email_service import enviar_correo_recuperacion, EmailSendError, enviar_correo_verificacion, enviar_alerta_nuevo_dispositivo
+from .models import TokenRecuperacion, Usuario, Municipio, TokenVerificacion, DispositivoConfiable
 from .captcha_utils import validar_captcha
 from .device_utils import get_client_ip, parse_user_agent
 from .serializers import (
+    SolicitarRecuperacionSerializer,
+    ResetPasswordSerializer,
     RegistroSerializer,
     UsuarioPerfilSerializer,
     MunicipioSerializer,
@@ -357,3 +359,100 @@ def listar_municipios(request):
     municipios = Municipio.objects.all()
     serializer = MunicipioSerializer(municipios, many=True)
     return Response(serializer.data)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def solicitar_recuperacion(request):
+    """
+    Endpoint para solicitar el restablecimiento de contrasena.
+    Recibe el email, genera un token seguro y envia el enlace por correo.
+    Responde con el mismo mensaje tanto si el email existe como si no,
+    para evitar la enumeracion de usuarios registrados.
+    """
+    serializer = SolicitarRecuperacionSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    email = serializer.validated_data['email']
+    mensaje_generico = (
+        'Si el correo esta registrado, recibiras un enlace para '
+        'restablecer tu contrasena en los proximos minutos.'
+    )
+
+    try:
+        usuario = Usuario.objects.get(email=email, email_verificado=True, is_active=True)
+    except Usuario.DoesNotExist:
+        # Respuesta generica para no revelar si el email esta registrado
+        return Response({'mensaje': mensaje_generico}, status=status.HTTP_200_OK)
+
+    # Generar token unico con expiracion de 1 hora
+    token_str = uuid.uuid4()
+    expiracion = timezone.now() + timedelta(hours=1)
+    TokenRecuperacion.objects.create(
+        usuario=usuario,
+        token=token_str,
+        expira_en=expiracion,
+    )
+
+    enlace = f'{settings.FRONTEND_URL}/auth/confirmar-recuperacion?token={token_str}'
+
+    try:
+        enviar_correo_recuperacion(
+            destinatario=usuario.email,
+            nombre=usuario.first_name,
+            enlace_recuperacion=enlace,
+        )
+    except Exception:
+        # Si el correo falla, no revelamos el motivo
+        pass
+
+    return Response({'mensaje': mensaje_generico}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def confirmar_recuperacion(request):
+    """
+    Endpoint para confirmar el restablecimiento de contrasena.
+    Recibe el token y la nueva contrasena, valida el token y actualiza la contrasena.
+    """
+    serializer = ResetPasswordSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    token_uuid = serializer.validated_data['token']
+    password_nueva = serializer.validated_data['password_nueva']
+
+    try:
+        token = TokenRecuperacion.objects.get(token=token_uuid)
+    except TokenRecuperacion.DoesNotExist:
+        return Response(
+            {'error': 'El enlace de recuperacion es invalido.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if token.usado:
+        return Response(
+            {'error': 'Este enlace ya fue utilizado. Solicita uno nuevo.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if timezone.now() > token.expira_en:
+        return Response(
+            {'error': 'El enlace ha expirado. Solicita uno nuevo.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Actualizar la contrasena del usuario
+    usuario = token.usuario
+    usuario.set_password(password_nueva)
+    usuario.save()
+
+    # Marcar el token como usado
+    token.usado = True
+    token.save()
+
+    return Response(
+        {'mensaje': 'Contrasena actualizada correctamente. Ya puedes iniciar sesion.'},
+        status=status.HTTP_200_OK,
+    )

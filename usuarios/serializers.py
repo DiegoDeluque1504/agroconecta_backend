@@ -219,3 +219,27 @@ class CambiarPasswordSerializer(serializers.Serializer):
 
         validate_password(attrs['password_nueva'], user=usuario)
         return attrs
+
+class SolicitarRecuperacionSerializer(serializers.Serializer):
+    """
+    Serializer para solicitar el restablecimiento de contrasena.
+    Solo valida que el email sea un email valido.
+    """
+    email = serializers.EmailField(required=True)
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    """
+    Serializer para confirmar el restablecimiento de contrasena.
+    Valida el token UUID y la nueva contrasena con las reglas de Django.
+    """
+    token = serializers.UUIDField(required=True)
+    password_nueva = serializers.CharField(
+        required=True,
+        write_only=True,
+        label='Nueva contrasena',
+    )
+
+    def validate_password_nueva(self, value):
+        validate_password(value)
+        return value
