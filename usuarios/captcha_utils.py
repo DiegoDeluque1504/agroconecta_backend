@@ -9,6 +9,10 @@ def validar_captcha(token, ip=None):
     Valida un token de Cloudflare Turnstile contra la API de Cloudflare.
     Si TURNSTILE_SECRET_KEY no está configurada, en modo DEBUG/desarrollo permite pasar.
     """
+    if not getattr(settings, 'TURNSTILE_ENABLED', True):
+        logger.warning("Validación de CAPTCHA deshabilitada temporalmente por configuración.")
+        return True
+
     secret_key = settings.TURNSTILE_SECRET_KEY
     if not secret_key:
         if settings.DEBUG:

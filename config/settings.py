@@ -211,6 +211,7 @@ else:
 # Cloudflare Turnstile CAPTCHA
 TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY', '')
 TURNSTILE_SITE_KEY = os.environ.get('TURNSTILE_SITE_KEY', '')
+TURNSTILE_ENABLED = os.environ.get('TURNSTILE_ENABLED', 'true').strip().lower() in ('1', 'true', 'yes')
 
 
 FRONTEND_URL = os.getenv(
